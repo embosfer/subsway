@@ -1,3 +1,24 @@
+/***********************************************************************************************************************
+ *
+ * SubsWay - an open source subtitles downloading tool
+ * ===================================================
+ *
+ * Copyright (C) 2013 by Emilio Bosch Ferrando
+ * https://github.com/embosfer
+ *
+ ***********************************************************************************************************************
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ ***********************************************************************************************************************/
+
 package com.embosfer.subsway.front;
 
 import java.util.Vector;
@@ -9,22 +30,28 @@ import javax.swing.table.TableColumn;
 import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class SubsWayResultsTable extends JTable {
 
-	private static String[] COLUMN_NAMES = { "SubtitleID", "Subtitle name" };
+	private static final Logger LOG = LoggerFactory
+			.getLogger(SubsWayResultsTable.class);
+
+	public static String[] COLUMN_NAMES = { "SubtitleID", "Subtitle name" };
 	private static final int COL_NUM_SUBTITLE_ID = 0;
 	private static final int COL_NUM_SUBTITLE_NAME = 1;
 	private static final int NB_OF_ROWS = 0;
 
-//	private final TableRowSorter<TableModel> sorter;
+	// private final TableRowSorter<TableModel> sorter;
 	private final MyRowSorter sorter;
-//	private final BetterTableRowSorter sorter;
+	// private final BetterTableRowSorter sorter;
 	// private final TableRowSorter<DynamicDefaultTableModel> sorter;
 	private final SubsFilter subsFilter;
 	private String typed = null;
 
 	public SubsWayResultsTable() {
-		super(new DynamicDefaultTableModel(COLUMN_NAMES, NB_OF_ROWS));
+		super(new DefaultTableModel(COLUMN_NAMES, NB_OF_ROWS));
 
 		// hide id: dirty version but works
 		TableColumn idCol = getColumnModel().getColumn(0);
@@ -39,43 +66,41 @@ public class SubsWayResultsTable extends JTable {
 		putClientProperty("Quaqua.Table.style", "striped"); // for MAC version
 		setPreferredScrollableViewportSize(this.getPreferredSize());
 		setAutoCreateRowSorter(true);
-//		sorter = new TableRowSorter<TableModel>(this.getModel());
-		sorter = new MyRowSorter((DynamicDefaultTableModel) getModel());
-//		sorter.setComparator(COL_NUM_SUBTITLE_NAME, new EmptyComparator(sorter, COL_NUM_SUBTITLE_NAME));
+		// sorter = new TableRowSorter<TableModel>(this.getModel());
+		sorter = new MyRowSorter((DefaultTableModel) getModel());
+		// sorter.setComparator(COL_NUM_SUBTITLE_NAME, new
+		// EmptyComparator(sorter, COL_NUM_SUBTITLE_NAME));
 		// sorter = new TableRowSorter<DynamicDefaultTableModel>();
 		setRowSorter(sorter);
 		subsFilter = new SubsFilter();
 	}
-	
-//	private class MyRowSorter extends TableRowSorter<DynamicDefaultTableModel> {
-//		
-//		public MyRowSorter(DynamicDefaultTableModel tableModel) {
-//			super(tableModel);
-//		}
-//		
-//		@Override
-//		public int convertRowIndexToModel(int index) {
-//			return super.convertRowIndexToModel(index);
-//		}
-//	}
-	private class MyRowSorter extends TableRowSorter<DynamicDefaultTableModel> {
-		
-		public MyRowSorter(DynamicDefaultTableModel tableModel) {
+
+	// private class MyRowSorter extends
+	// TableRowSorter<DynamicDefaultTableModel> {
+	//
+	// public MyRowSorter(DynamicDefaultTableModel tableModel) {
+	// super(tableModel);
+	// }
+	//
+	// @Override
+	// public int convertRowIndexToModel(int index) {
+	// return super.convertRowIndexToModel(index);
+	// }
+	// }
+	private class MyRowSorter extends TableRowSorter<DefaultTableModel> {
+
+		public MyRowSorter(DefaultTableModel tableModel) {
 			super(tableModel);
 		}
-		
+
 		@Override
 		public int convertRowIndexToModel(int index) {
 			return super.convertRowIndexToModel(index);
 		}
 	}
-	
+
 	public void clearTable() {
-		for (int i = 0; i < this.getRowCount(); i++) {
-			for (int j = 0; j < this.getColumnCount(); j++) {
-				this.setValueAt("", i, j);
-			}
-		}
+		((DefaultTableModel) this.getModel()).setRowCount(0);
 	}
 
 	public void applyFilter(String typed) {
@@ -93,10 +118,10 @@ public class SubsWayResultsTable extends JTable {
 		public boolean include(
 				javax.swing.RowFilter.Entry<? extends TableModel, ? extends Integer> entry) {
 			String valueInCell = entry.getStringValue(COL_NUM_SUBTITLE_NAME);
-			System.out.println("Typed => "
-					+ (typed.equals("") ? "nothing" : typed)
-					+ " | valueInCell => "
-					+ (valueInCell.equals("") ? "nothing" : valueInCell));
+			if (LOG.isDebugEnabled())
+				LOG.debug("Typed => " + (typed.equals("") ? "nothing" : typed)
+						+ " | valueInCell => "
+						+ (valueInCell.equals("") ? "nothing" : valueInCell));
 			// if (typed == null) return true;
 			if (valueInCell.equals(""))
 				return true;
@@ -105,11 +130,12 @@ public class SubsWayResultsTable extends JTable {
 			return false;
 		}
 	}
-	
-	public void addRow() {
-		((DynamicDefaultTableModel) this.getModel()).addRow(new Vector<Object>(COLUMN_NAMES.length));
-	}
 
+	public void addRow() {
+		((DynamicDefaultTableModel) this.getModel()).addRow(new Vector<Object>(
+				COLUMN_NAMES.length));
+	}
+	
 	private static class DynamicDefaultTableModel extends DefaultTableModel {
 
 		public DynamicDefaultTableModel(String[] columnNames, int rows) {
@@ -118,10 +144,11 @@ public class SubsWayResultsTable extends JTable {
 
 		@Override
 		public void setValueAt(Object aValue, int row, int column) {
-			System.out.println("Model Row " + row + " - Model Column " + column);
-//			if (row > getRowCount() - 1) {
-//				addRow(new Vector<Object>(COLUMN_NAMES.length));
-//			}
+			if (LOG.isDebugEnabled())
+				LOG.debug("Model Row " + row + " - Model Column " + column);
+			// if (row > getRowCount() - 1) {
+			// addRow(new Vector<Object>(COLUMN_NAMES.length));
+			// }
 			super.setValueAt(aValue, row, column);
 		}
 
@@ -133,7 +160,8 @@ public class SubsWayResultsTable extends JTable {
 
 		@Override
 		public Object getValueAt(int row, int column) {
-//			System.out.println("Row " + row + " - column " + column);
+			// if (LOG.isDebugEnabled()) LOG.debug("Row " + row + " - column " +
+			// column);
 			return super.getValueAt(row, column);
 		}
 
