@@ -1,3 +1,24 @@
+/***********************************************************************************************************************
+ *
+ * SubsWay - an open source subtitles downloading tool
+ * ===================================================
+ *
+ * Copyright (C) 2013 by Emilio Bosch Ferrando
+ * https://github.com/embosfer
+ *
+ ***********************************************************************************************************************
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ ***********************************************************************************************************************/
+
 package com.embosfer.subsway.core.opensub;
 
 import java.io.ByteArrayInputStream;
@@ -19,11 +40,19 @@ import org.apache.ws.commons.util.Base64.DecodingException;
 import org.apache.xmlrpc.XmlRpcException;
 import org.apache.xmlrpc.client.XmlRpcClient;
 import org.apache.xmlrpc.client.XmlRpcClientConfigImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.embosfer.subsway.front.SubsWayUI;
 
 public class OpenSubtitlesManager {
 
+	private static final Logger LOG = LoggerFactory
+			.getLogger(OpenSubtitlesManager.class);
+
 	private static final String SERVER_URL_XML_RPC_OPENSUBTITLES = "http://api.opensubtitles.org/xml-rpc";
 	private static final String USER_AGENT_OS_TEST = "OS Test User Agent";
+//	private static final String USER_AGENT_OS = "SubsWay";
 
 	private static final String METHOD_LOG_IN = "LogIn";
 	private static final String METHOD_GET_SUB_LANGUAGES = "GetSubLanguages";
@@ -79,16 +108,26 @@ public class OpenSubtitlesManager {
 			userAgent = USER_AGENT_OS_TEST;
 		}
 		Object[] p = { userName, pwd, language, userAgent };
+		if (LOG.isDebugEnabled())
+			LOG.debug("Trying to connect with userAgent " + userAgent);
 		Map<String, String> resLogin = (Map<String, String>) client.execute(
 				METHOD_LOG_IN, p);
-		System.out.println(resLogin);
 		if (isOkStatus(resLogin.get(RES_STATUS))) {
 			idSession = resLogin.get(PARAM_TOKEN);
-			System.out.println("Got token (id) " + idSession
-					+ " from OS server");
+			if (LOG.isDebugEnabled())
+				LOG.debug("Connected! Got token (id) " + idSession
+						+ " from OS server");
 			return true;
 		}
-		return false;
+		LOG.warn("Failed connecting via userAgent " + userAgent
+				+ ". Will try to connect with test userAgent "
+				+ USER_AGENT_OS_TEST + " in 2 seconds...");
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		return login(userName, pwd, language, "");
 	}
 
 	@SuppressWarnings("unchecked")
@@ -280,7 +319,7 @@ public class OpenSubtitlesManager {
 				out = new FileOutputStream(subFileName);
 			} catch (IOException e) {
 				e.printStackTrace();
-				System.err.println("Error while creating the output file");
+				LOG.error("Error while creating the output file");
 				return false;
 			}
 
@@ -303,7 +342,7 @@ public class OpenSubtitlesManager {
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
-				System.err.println("Error while gunziping the subs file");
+				LOG.error("Error while gunziping the subs file");
 				return false;
 			} finally {
 				try {
@@ -319,7 +358,7 @@ public class OpenSubtitlesManager {
 
 		} catch (DecodingException e) {
 			e.printStackTrace();
-			System.err.println("Error while decoding the downloaded subs file");
+			LOG.error("Error while decoding the downloaded subs file");
 		}
 		return true;
 	}
