@@ -38,11 +38,16 @@ import javax.swing.JTextArea;
 import javax.swing.SwingWorker;
 
 import org.apache.xmlrpc.XmlRpcException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.embosfer.subsway.core.opensub.OpenSubtitlesLanguage;
+import com.embosfer.subsway.core.opensub.OpenSubtitlesLoginHandler;
 import com.embosfer.subsway.core.opensub.OpenSubtitlesManager;
 
 public class SubsWayProgressBar extends JFrame {
+	
+	private static final Logger LOG = LoggerFactory.getLogger(SubsWayProgressBar.class);
 
 	private JTextArea txtAreaTaskOutput;
 	private Map<String, OpenSubtitlesLanguage> languagesByID;
@@ -86,48 +91,21 @@ public class SubsWayProgressBar extends JFrame {
 			this.progressBarFrame = progressBarFrame;
 		}
 
-		private static final String USER_NAME = "";
-		private static final String PWD = "";
-		private static final String LANGUAGE = "";
-		private static final String USER_AGENT = "SubsWay";
-		private static final int RETRY_LOGIN_IN_MS = 2000; // retry every 2 secs by default
-		private static final int MAX_RETRIES = 5;
-
 		/*
 		 * Main task. Executed in background thread.
 		 */
 		@Override
 		public List<OpenSubtitlesLanguage> doInBackground() {
-			OpenSubtitlesManager osm = OpenSubtitlesManager.getInstance();
+			// login
+			OpenSubtitlesLoginHandler loginHandler = OpenSubtitlesLoginHandler.getInstance();
+			loginHandler.login();
+			
+			// logon succesful
+			publish("Logged succesfully on OS server...");
+
 			try {
-				// login
-				int nbLoginAttempts = 0;
-				boolean loginOK = false;
-				String userAgent = USER_AGENT;
-
-				do {
-					if (nbLoginAttempts == MAX_RETRIES) {
-						userAgent = "";
-						publish("Try to login to OS server with userAgent '" + userAgent + "'");
-					}
-					loginOK = osm.login(USER_NAME, PWD, LANGUAGE, userAgent);
-					if (!loginOK) {
-						publish("Couldn't login to OS server with userAgent '" + userAgent + "'. A retry will be done in "
-								+ RETRY_LOGIN_IN_MS + " millis...");
-						try {
-							Thread.sleep(RETRY_LOGIN_IN_MS);
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-					}
-					nbLoginAttempts++;
-
-				} while (!loginOK);
-
-				// logon succesful
-				publish("Logged succesfully on OS server...");
-
 				// get subLanguages
+				final OpenSubtitlesManager osm = OpenSubtitlesManager.getInstance();
 				List<OpenSubtitlesLanguage> subLanguages = osm.getSubLanguages();
 				languagesByID = new TreeMap<String, OpenSubtitlesLanguage>();
 				for (OpenSubtitlesLanguage lang : subLanguages) {
@@ -137,7 +115,9 @@ public class SubsWayProgressBar extends JFrame {
 						+ " languages from OS server...");
 				return subLanguages; // not really needed
 			} catch (XmlRpcException ex) {
-				publish("Bouuum" + ex);
+				String languageProblem = "There was a problem while retrieving the available languages from the OS server";
+				publish(languageProblem);
+				LOG.error(languageProblem, ex);
 			}
 			return null;
 		}
@@ -157,7 +137,6 @@ public class SubsWayProgressBar extends JFrame {
 		@Override
 		public void done() {
 			Toolkit.getDefaultToolkit().beep();
-			// startButton.setEnabled(true);
 			setCursor(null); // turn off the wait cursor
 			txtAreaTaskOutput.append("Done!\n");
 			
