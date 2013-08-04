@@ -43,8 +43,6 @@ import org.apache.xmlrpc.client.XmlRpcClientConfigImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.embosfer.subsway.front.SubsWayUI;
-
 public class OpenSubtitlesManager {
 
 	private static final Logger LOG = LoggerFactory
@@ -55,6 +53,7 @@ public class OpenSubtitlesManager {
 //	private static final String USER_AGENT_OS = "SubsWay";
 
 	private static final String METHOD_LOG_IN = "LogIn";
+	private static final String METHOD_NO_OPERATION = "NoOperation";
 	private static final String METHOD_GET_SUB_LANGUAGES = "GetSubLanguages";
 	private static final String METHOD_SEARCH_SUBTITLES = "SearchSubtitles";
 	private static final String METHOD_DOWNLOAD_SUB = "DownloadSubtitles";
@@ -119,15 +118,25 @@ public class OpenSubtitlesManager {
 						+ " from OS server");
 			return true;
 		}
-		LOG.warn("Failed connecting via userAgent " + userAgent
-				+ ". Will try to connect with test userAgent "
-				+ USER_AGENT_OS_TEST + " in 2 seconds...");
-		try {
-			Thread.sleep(2000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
+		return false;
+	}
+	
+	/**
+	 * keep given session alive, check session validity
+	 * @return true if session is alive, false otherwise
+	 * @throws XmlRpcException 
+	 */
+	@SuppressWarnings("unchecked")
+	public boolean noOperation() throws XmlRpcException {
+		LOG.info("Checking session with OS server...");
+		Map<String, String> resNoOperation = (Map<String, String>) client.execute(METHOD_NO_OPERATION, Arrays.asList(idSession));
+		if (isOkStatus(resNoOperation.get(RES_STATUS))) {
+			LOG.info("Session " + idSession + " is alive.");
+			return true;
+		} else {
+			LOG.info("Session " + idSession + " is down. Result received " + resNoOperation);
+			return false;
 		}
-		return login(userName, pwd, language, "");
 	}
 
 	@SuppressWarnings("unchecked")
