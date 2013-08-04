@@ -1,3 +1,24 @@
+/***********************************************************************************************************************
+ *
+ * SubsWay - an open source subtitles downloading tool
+ * ===================================================
+ *
+ * Copyright (C) 2013 by Emilio Bosch Ferrando
+ * https://github.com/embosfer
+ *
+ ***********************************************************************************************************************
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ ***********************************************************************************************************************/
+
 package com.embosfer.subsway.front;
 
 import java.awt.BorderLayout;
@@ -30,12 +51,18 @@ import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.border.BevelBorder;
+import javax.swing.table.DefaultTableModel;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.embosfer.subsway.core.opensub.OpenSubtitlesLanguage;
 import com.embosfer.subsway.core.opensub.OpenSubtitlesManager;
 import com.embosfer.subsway.core.opensub.OpenSubtitlesSubtitle;
 
 public class SubsWayUI extends JFrame {
+
+	private static final Logger LOG = LoggerFactory.getLogger(SubsWayUI.class);
 
 	private static final String VERSION = "Version 1.0";
 	private static final String STATUS_WAITING_FOR_USER_INPUT = "Waiting for user input";
@@ -51,14 +78,17 @@ public class SubsWayUI extends JFrame {
 	private final JButton btnDestFolder;
 	private final JTextField txtFilter;
 	private final JButton btnSearch;
+	private final JButton btnResetFilter;
 	private final JButton btnDownload;
 	private final JButton btnClearResults;
 	private final JComboBox cbLanguages;
 
 	private JLabel lblCurrentStatus;
 
-	private final SubsWayResultsTable tableResults;
+	private SubsWayResultsTable tableResults;
+	private DefaultTableModel tableModel;
 	private final Map<String, OpenSubtitlesLanguage> languagesByName;
+
 
 	// private final SubsTerraneoLanguagesCheckBoxFrameDyn chbLanguages;
 	// private final SubsTerraneoResultsTablePanel panelResults;
@@ -132,15 +162,21 @@ public class SubsWayUI extends JFrame {
 				dirChooser.setDialogTitle("Choose your destination folder");
 				dirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 				if (dirChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
-					System.out.println("getCurrentDirectory(): "
-							+ dirChooser.getCurrentDirectory());
-					System.out.println("getSelectedFile() : "
-							+ dirChooser.getSelectedFile());
+					if (LOG.isDebugEnabled()) {
+						LOG.debug("getCurrentDirectory(): "
+								+ dirChooser.getCurrentDirectory());
+						LOG.debug("getSelectedFile() : "
+								+ dirChooser.getSelectedFile());
+					}
 					txtDestFolder.setText(dirChooser.getSelectedFile()
 							.toString());
-					lblCurrentStatus.setText("Destination folder has been set to " + txtDestFolder.getText());
+					lblCurrentStatus
+							.setText("Destination folder has been set to "
+									+ txtDestFolder.getText());
 				} else {
-					System.out.println("No Selection ");
+					if (LOG.isDebugEnabled()) {
+						LOG.debug("No Selection");
+					}
 				}
 			}
 		});
@@ -180,12 +216,21 @@ public class SubsWayUI extends JFrame {
 			}
 		});
 		filterResultsPanel.add(txtFilter);
+		btnResetFilter = new JButton("Reset");
+		btnResetFilter.setEnabled(false);
+		btnResetFilter.addActionListener(new ActionListener() {
 
-		tableResults = new SubsWayResultsTable();
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				txtFilter.setText("");
+				tableResults.applyFilter(txtFilter.getText());
+			}
+		});
+		filterResultsPanel.add(btnResetFilter);
+
+		createTableResults();
 		JScrollPane centralPanelCenter = new JScrollPane(tableResults);
 		centralPanel.add(centralPanelCenter, BorderLayout.CENTER);
-
-		tableResults.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
 		JPanel centralPanelSouth = new JPanel(new FlowLayout(FlowLayout.RIGHT));
 		centralPanel.add(centralPanelSouth, BorderLayout.SOUTH);
@@ -228,6 +273,12 @@ public class SubsWayUI extends JFrame {
 		this.setVisible(true);
 	}
 
+	private void createTableResults() {
+		tableResults = new SubsWayResultsTable();
+		tableResults.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+		tableModel = (DefaultTableModel) tableResults.getModel();
+	}
+
 	private class NumberVerifier extends InputVerifier {
 
 		@Override
@@ -259,23 +310,16 @@ public class SubsWayUI extends JFrame {
 	/**
 	 * Searches subtitles asynchronously
 	 * 
-	 * @author embosfer
-	 * 
 	 */
-	private class SubsSearcher extends SwingWorker<Void, String> {
+	private class SubsSearcher extends SwingWorker<Void, OpenSubtitlesSubtitle> {
 
 		private final String program;
 		private final Integer season;
 		private final Integer episode;
 		private final String lang;
 
-		private static final String NOTHING_FOUND = "Nothing";
-
 		private boolean somethingFound = false;
-		private Integer chunksProcessed = 0;
-//		private Integer rowCount = 0;
 		private Integer rowCount;
-		private int colCount = 0;
 
 		public SubsSearcher(String program, Integer season, Integer episode,
 				String lang) {
@@ -293,39 +337,43 @@ public class SubsWayUI extends JFrame {
 					.getInstance().searchSubtitlesByQuery(program, season,
 							episode, lang);
 			if (subsFound.isEmpty()) {
-				publish(NOTHING_FOUND);
+				publish((OpenSubtitlesSubtitle) null);
 				return null;
 			}
 			somethingFound = true;
-			for (OpenSubtitlesSubtitle subs : subsFound) {
+			for (OpenSubtitlesSubtitle sub : subsFound) {
 				// populate table
-				publish(subs.getIdSubtitleFile(), subs.getSubFileName());
+				publish(sub);
 			}
 			return null;
 		}
 
 		@Override
-		protected void process(List<String> chunks) {
+		protected void process(List<OpenSubtitlesSubtitle> chunks) {
 			super.process(chunks);
-			if (chunks.size() == 1 && chunks.get(0).equals(NOTHING_FOUND)) {
+			if (noSubsFound(chunks)) {
 				JOptionPane.showMessageDialog(null,
-						"Nothing found for input query... Try again ;)",
+						"No subtitles found for input query... Try again ;)",
 						"Oops", JOptionPane.INFORMATION_MESSAGE);
 			} else {
-				for (String chunk : chunks) {
-					if (rowCount > tableResults.getRowCount() - 1) {
-						// need to create a new row
-						tableResults.addRow();
-					}
-					tableResults.setValueAt(chunk, rowCount, colCount++);
-					chunksProcessed = chunksProcessed + 1;
-					if (chunksProcessed % 2 == 0) { // impares: ids; 
-													// pares: nombres
-						rowCount = rowCount + 1;
-						colCount = 0;
+				if (LOG.isDebugEnabled()) {
+					LOG.debug("Chunks received => " + chunks.size());
+					for (OpenSubtitlesSubtitle chunk : chunks) {
+						LOG.debug(chunk.getIdSubtitleFile() + " - " + chunk.getSubFileName());
 					}
 				}
+				for (OpenSubtitlesSubtitle chunk : chunks) {
+					Object[] rowData = new Object[SubsWayResultsTable.COLUMN_NAMES.length];
+					rowData[0] = chunk.getIdSubtitleFile();
+					rowData[1] = chunk.getSubFileName();
+					tableModel.addRow(rowData);
+					rowCount = rowCount + 1;
+				}
 			}
+		}
+
+		private boolean noSubsFound(List<OpenSubtitlesSubtitle> chunks) {
+			return chunks.size() == 1 && chunks.get(0) == null;
 		}
 
 		@Override
@@ -335,8 +383,10 @@ public class SubsWayUI extends JFrame {
 				btnDownload.setEnabled(true); // allow download
 				btnClearResults.setEnabled(true); // allow clear
 				txtFilter.setEnabled(true); // allow filter
+				btnResetFilter.setEnabled(true);
 			}
 			lblCurrentStatus.setText(rowCount + " results found");
+			rowCount = 0;
 		}
 
 	}
@@ -363,9 +413,9 @@ public class SubsWayUI extends JFrame {
 					cbLanguages.getSelectedItem().toString())
 					.getSubLanguageID();
 
-			System.out.println("Query=> Show: " + program + " - Season: "
-					+ season + " - Episode: " + episode + "  - Language: "
-					+ lang);
+			if (LOG.isDebugEnabled())
+				LOG.debug("Query=> Show: " + program + " - Season: " + season
+						+ " - Episode: " + episode + "  - Language: " + lang);
 
 			// search
 			lblCurrentStatus.setText(STATUS_SEARCHING_SUBS);
@@ -440,21 +490,20 @@ public class SubsWayUI extends JFrame {
 				OpenSubtitlesSubtitle sub = new OpenSubtitlesSubtitle();
 				// Client (UI) changes stuff "Server side" (model) => need to translate
 				int modelRowIndex = tableResults.convertRowIndexToModel(viewRow);
-				String idSubtitleFile = (String) tableResults.getModel()
-						.getValueAt(modelRowIndex, 0);
+				String idSubtitleFile = (String) tableModel.getValueAt(modelRowIndex, 0);
 				// row could be empty
 				if (idSubtitleFile == null
 						|| (idSubtitleFile != null && idSubtitleFile.equals("")))
 					continue;
 				sub.setIdSubtitleFile(idSubtitleFile);
-				sub.setSubFileName((String) tableResults.getModel().getValueAt(
+				sub.setSubFileName((String) tableModel.getValueAt(
 						modelRowIndex, 1));
 				subsToDownload.add(sub);
 			}
 
 			if (subsToDownload.isEmpty()) {
 				JOptionPane.showMessageDialog(null,
-						"Bad boy/girl... You have selected empty rows",
+						"Bad boy/girl... You haven't selected any row",
 						"Nothing to download", JOptionPane.WARNING_MESSAGE);
 				btnSearch.setEnabled(true); // re-enable
 				return;
@@ -475,17 +524,17 @@ public class SubsWayUI extends JFrame {
 			btnDownload.setEnabled(false); // disable download
 			btnClearResults.setEnabled(false); // disable clear
 			txtFilter.setEnabled(false);
+			btnResetFilter.setEnabled(false);
 			lblCurrentStatus.setText(STATUS_RESULTS_CLEARED);
 			txtFilter.setText(FILTER_RESULTS);
 		}
 	}
 
-	// TODO: ordering
-	// TODO: filtering
-	// TODO: heartbeating with server
-	// TODO: logging
 	// TODO: internalization
 	// TODO: change look and feel on the UI
+	// TODO: put tests in place
+	// TODO: settings like usual downloading folder...
+	// TODO: subs downloaded history 
 
 	/**
 	 * @param args
@@ -494,11 +543,6 @@ public class SubsWayUI extends JFrame {
 
 		SwingUtilities.invokeLater(new Runnable() {
 
-			/*
-			 * (non-Javadoc)
-			 * 
-			 * @see java.lang.Runnable#run()
-			 */
 			@Override
 			public void run() {
 				// set system properties here that affect Quaqua
