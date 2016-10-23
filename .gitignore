@@ -1,7 +1,5 @@
-/classes
-/.git
-/.settings
 .metadata/
+.classpath
 /.DS_Store
 .project
 build/
