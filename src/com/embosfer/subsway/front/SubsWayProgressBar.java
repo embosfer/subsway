@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import javax.swing.BorderFactory;
+import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
@@ -44,16 +45,19 @@ import org.slf4j.LoggerFactory;
 import com.embosfer.subsway.core.opensub.OpenSubtitlesLanguage;
 import com.embosfer.subsway.core.opensub.OpenSubtitlesLoginHandler;
 import com.embosfer.subsway.core.opensub.OpenSubtitlesManager;
+import com.embosfer.subsway.shared.SubsWaySettings;
 
+@SuppressWarnings("serial")
 public class SubsWayProgressBar extends JFrame {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(SubsWayProgressBar.class);
 
-	private JTextArea txtAreaTaskOutput;
-	private Map<String, OpenSubtitlesLanguage> languagesByID;
+	private final JTextArea txtAreaTaskOutput;
 
 	public SubsWayProgressBar() {
-		super("SubsTerraneo :: Welcome!");
+		super("SubsWay :: Welcome!");
+
+		loadAppIcon();
 
 		txtAreaTaskOutput = new JTextArea(5, 20);
 		txtAreaTaskOutput.setMargin(new Insets(5, 5, 5, 5));
@@ -78,17 +82,41 @@ public class SubsWayProgressBar extends JFrame {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
 		// init and execute background task => it will take care of the frames displaying
-		LoginAndGetLanguagesTask task = new LoginAndGetLanguagesTask(this);
+		LogInAndGetLanguagesTask task = new LogInAndGetLanguagesTask(this);
 		task.execute();
 	}
 
-	private class LoginAndGetLanguagesTask extends
-			SwingWorker<List<OpenSubtitlesLanguage>, String> {
-		
-		private SubsWayProgressBar progressBarFrame;
+	private void loadAppIcon() {
+		String pathToImage = "resources/subsway_logo.png"; //jar
+//		String pathToImage = "subsway_logo.png"; // eclipse
+		System.out.println("Path " + pathToImage);
+//		final URL resource = ClassLoader.getSystemResource(pathToImage);
+		final ImageIcon imageIcon = new ImageIcon(pathToImage);
+		setIconImage(imageIcon.getImage());
+//		if (SubsWayUtils.isOSMac()) {
+//			Application.getApplication().setDockIconImage(imageIcon.getImage());
+//			Application.getApplication().setAboutHandler(new AboutHandler() {
+//				
+//				@Override
+//				public void handleAbout(AboutEvent arg0) {
+//					//TODO: nice About message and smaller logo
+//					JOptionPane.showMessageDialog(null,
+//							SubsWayData.getVersion(), "About SubsWay",
+//							JOptionPane.INFORMATION_MESSAGE, imageIcon);
+//				}
+//			});
+//		}
+	}
 
-		LoginAndGetLanguagesTask(SubsWayProgressBar progressBarFrame) {
+	private class LogInAndGetLanguagesTask extends
+			SwingWorker<List<OpenSubtitlesLanguage>, String> {
+
+		private SubsWayProgressBar progressBarFrame;
+		private Map<String, OpenSubtitlesLanguage> languagesByID;
+
+		LogInAndGetLanguagesTask(SubsWayProgressBar progressBarFrame) {
 			this.progressBarFrame = progressBarFrame;
+			this.languagesByID = new TreeMap<String, OpenSubtitlesLanguage>();
 		}
 
 		/*
@@ -107,7 +135,6 @@ public class SubsWayProgressBar extends JFrame {
 				// get subLanguages
 				final OpenSubtitlesManager osm = OpenSubtitlesManager.getInstance();
 				List<OpenSubtitlesLanguage> subLanguages = osm.getSubLanguages();
-				languagesByID = new TreeMap<String, OpenSubtitlesLanguage>();
 				for (OpenSubtitlesLanguage lang : subLanguages) {
 					languagesByID.put(lang.getLanguageName(), lang);
 				}
@@ -143,6 +170,7 @@ public class SubsWayProgressBar extends JFrame {
 			// we can now dispose the progress bar and launch the main window
 			progressBarFrame.dispose();
 			new SubsWayUI(languagesByID);
+			if (SubsWaySettings.isClearResultsOnNewSearch()) new PreferencesPanel();
 		}
 	}
 

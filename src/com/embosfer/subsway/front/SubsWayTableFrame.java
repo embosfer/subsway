@@ -36,6 +36,7 @@ import javax.swing.table.AbstractTableModel;
 
 public class SubsWayTableFrame extends JFrame {
 
+	private static final long serialVersionUID = 1L;
 	public static TableModel myModel;
 
 	public SubsWayTableFrame() {
@@ -47,9 +48,7 @@ public class SubsWayTableFrame extends JFrame {
 		table.getColumnModel().getColumn(0).setPreferredWidth(100); // Download column
 		table.getColumnModel().getColumn(1).setPreferredWidth(600); // Download column
 		table.setPreferredScrollableViewportSize(new Dimension(700, 200));
-		// Creamos un contenedor para la Tabla
 		JScrollPane scrollPane = new JScrollPane(table);
-		// Agregamos nuestra tabla al contenedor
 		getContentPane().add(scrollPane, BorderLayout.CENTER);
 		addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent e) {
@@ -60,8 +59,9 @@ public class SubsWayTableFrame extends JFrame {
 
 	public class TableModel extends AbstractTableModel {
 
+		private static final long serialVersionUID = 1L;
 		private static final int COL_DOWNLOAD = 0; 
-		private static final int COL_SUB_NAME = 1; 
+		//private static final int COL_SUB_NAME = 1; 
 		
 		final String[] columnNames;
 		public Class<?>[] colTypes = { Boolean.class, String.class};
@@ -77,7 +77,7 @@ public class SubsWayTableFrame extends JFrame {
 			this.vectorOfVectors = new Vector<Vector<Object>>(); // n size (don't specify it)
 		}
 
-		// únicamente retornamos el numero de elementos del
+		// ï¿½nicamente retornamos el numero de elementos del
 		// array de los nombres de las columnas
 		public int getColumnCount() {
 			return columnNames.length;
@@ -122,7 +122,7 @@ public class SubsWayTableFrame extends JFrame {
 		}
 
 		/*
-		 * No tienes que implementar este método a menos que las celdas de tu
+		 * No tienes que implementar este mï¿½todo a menos que las celdas de tu
 		 * tabla sean Editables
 		 */
 		public boolean isCellEditable(int row, int col) {
@@ -130,7 +130,7 @@ public class SubsWayTableFrame extends JFrame {
 		}
 
 		/*
-		 * No tienes que implementar este método a menos que los datos de tu
+		 * No tienes que implementar este mï¿½todo a menos que los datos de tu
 		 * tabla cambien
 		 */
 		public void setValueAt(Object value, int row, int col) {

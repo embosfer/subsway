@@ -1,0 +1,6 @@
+# Global settings
+show.settings.window=false
+
+# Search settings
+pref.download.folder=/Users/embosfer/Downloads
+clear.res.on.new.search=true

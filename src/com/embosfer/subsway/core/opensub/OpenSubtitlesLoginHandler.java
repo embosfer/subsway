@@ -48,7 +48,7 @@ public class OpenSubtitlesLoginHandler {
 	private static final int MAX_RETRIES = 5;
 	
 	// keep alive session
-	private static final long DELAY = 15 * 60; // every 5 minutes
+	private static final long DELAY = 15 * 60; // every 15 minutes
 	
 	private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(); // TODO cannot specify the thread factory
 	

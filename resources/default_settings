@@ -1,0 +1,7 @@
+# Global settings
+show.settings.window=true
+
+# Search settings
+subtitles.pref.lang=English
+smart.tvshow.search=true
+clear.res.on.new.search=true
