@@ -1,3 +1,10 @@
 /classes
 /.git
+/.settings
+.metadata/
 /.DS_Store
+.project
+build/
+.gradle/
+/var/
+/bin/
