@@ -3,7 +3,6 @@
  * SubsWay - an open source subtitles downloading tool
  * ===================================================
  *
- * Copyright (C) 2013 by Emilio Bosch Ferrando
  * https://github.com/embosfer
  *
  ***********************************************************************************************************************

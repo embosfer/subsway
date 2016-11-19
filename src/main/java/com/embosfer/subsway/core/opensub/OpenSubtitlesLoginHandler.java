@@ -3,7 +3,6 @@
  * SubsWay - an open source subtitles downloading tool
  * ===================================================
  *
- * Copyright (C) 2013 by Emilio Bosch Ferrando
  * https://github.com/embosfer
  *
  ***********************************************************************************************************************
@@ -101,20 +100,19 @@ public class OpenSubtitlesLoginHandler {
 			}
 			try {
 				loginOK = osm.login(USER_NAME, PWD, LANGUAGE, userAgent);
-			} catch (XmlRpcException e1) {
-				LOG.error("Error while logging to OS server", e1);
-			}
-			if (!loginOK) {
-				LOG.info("Couldn't login to OS server with userAgent '" + userAgent + "'. A retry will be done in "
-						+ RETRY_LOGIN_IN_MS + " millis...");
-				try {
-					Thread.sleep(RETRY_LOGIN_IN_MS);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
+				if (!loginOK) {
+					LOG.info("Couldn't login to OS server with userAgent '" + userAgent + "'. A retry will be done in "
+							+ RETRY_LOGIN_IN_MS + " millis...");
+					try {
+						Thread.sleep(RETRY_LOGIN_IN_MS);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
 				}
+			} catch (XmlRpcException e1) {
+				LOG.error("Error while logging to OS server", e1.getCause());
 			}
 			nbLoginAttempts++;
-
 		} while (!loginOK);
 	}
 
